@@ -87,7 +87,7 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
                 <input type="file" accept=".zip" onChange={(e) => setZipFile(e.target.files[0])} required />
               </div>
               <div className="field">
-                <label>.exe file</label>
+                <label>.apk file</label>
                 <input type="file" accept=".apk" onChange={(e) => setExeFile(e.target.files[0])} required />
               </div>
             </>
