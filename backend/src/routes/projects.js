@@ -60,7 +60,7 @@ router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
 
   const { rows: releases } = await pool.query('SELECT * FROM releases WHERE project_id = $1', [id]);
   const fileIds = releases
-    .flatMap((r) => [r.bin_file_id, r.zip_file_id, r.zip2_file_id, r.exe_file_id])
+    .flatMap((r) => [r.bin_file_id, r.zip_file_id, r.zip2_file_id, r.apk_file_id])
     .filter(Boolean);
 
   await Promise.all(

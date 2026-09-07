@@ -31,7 +31,7 @@ function serializeRelease(release, stages, { canSeeFiles, user }) {
     bin_file_name: canSeeFiles ? release.bin_file_name : null,
     zip_file_name: canSeeFiles ? release.zip_file_name : null,
     zip2_file_name: canSeeFiles ? release.zip2_file_name : null,
-    exe_file_name: canSeeFiles ? release.exe_file_name : null,
+    apk_file_name: canSeeFiles ? release.apk_file_name : null,
     files_available: canSeeFiles,
     stages: stages
       .sort((a, b) => a.stage_number - b.stage_number)
@@ -102,7 +102,7 @@ router.get('/releases/:id', requireAuth, async (req, res) => {
 });
 
 // Admin: create a new release. Firmware projects upload .bin + optional .zip + optional Holtek .zip.
-// App projects upload .zip + .exe.
+// App projects upload .zip + .apk.
 router.post(
   '/projects/:projectId/releases',
   requireAuth,
@@ -111,7 +111,7 @@ router.post(
     { name: 'bin', maxCount: 1 },
     { name: 'zip', maxCount: 1 },
     { name: 'zip2', maxCount: 1 },
-    { name: 'exe', maxCount: 1 },
+    { name: 'apk', maxCount: 1 },
   ]),
   async (req, res) => {
     const { projectId } = req.params;
@@ -119,10 +119,10 @@ router.post(
     const binFile = req.files?.bin?.[0] || null;
     const zipFile = req.files?.zip?.[0] || null;
     const zip2File = req.files?.zip2?.[0] || null;
-    const exeFile = req.files?.apk?.[0] || null;
+    const apkFile = req.files?.apk?.[0] || null;
 
     const cleanup = () => {
-      [binFile, zipFile, zip2File, exeFile].forEach((f) => {
+      [binFile, zipFile, zip2File, apkFile].forEach((f) => {
         if (f) fs.unlink(f.path, () => {});
       });
     };
@@ -141,9 +141,9 @@ router.post(
       }
 
       if (project.type === 'app') {
-        if (!zipFile || !exeFile) {
+        if (!zipFile || !apkFile) {
           cleanup();
-          return res.status(400).json({ error: 'Both a .zip file and a .exe file are required for app releases' });
+          return res.status(400).json({ error: 'Both a .zip file and a .apk file are required for app releases' });
         }
       } else {
         if (!binFile) {
@@ -193,19 +193,19 @@ router.post(
         );
       }
 
-      let exeUpload = null;
-      if (exeFile) {
-        exeUpload = await drive.uploadFile(
-          exeFile.path,
-          `${versionTag}_${exeFile.originalname}`,
-          'application/octet-stream',
+      let apkUpload = null;
+      if (apkFile) {
+        apkUpload = await drive.uploadFile(
+          apkFile.path,
+          `${versionTag}_${apkFile.originalname}`,
+          'application/vnd.android.package-archive',
           folderId
         );
       }
 
       const { rows } = await pool.query(
         `INSERT INTO releases
-           (project_id, version, note, release_date, bin_file_id, bin_file_name, zip_file_id, zip_file_name, zip2_file_id, zip2_file_name, exe_file_id, exe_file_name, created_by)
+           (project_id, version, note, release_date, bin_file_id, bin_file_name, zip_file_id, zip_file_name, zip2_file_id, zip2_file_name, apk_file_id, apk_file_name, created_by)
          VALUES ($1, $2, $3, COALESCE($4::date, CURRENT_DATE), $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
         [
           projectId,
@@ -218,8 +218,8 @@ router.post(
           zipUpload ? zipUpload.name : null,
           zip2Upload ? zip2Upload.id : null,
           zip2Upload ? zip2Upload.name : null,
-          exeUpload ? exeUpload.id : null,
-          exeUpload ? exeUpload.name : null,
+          apkUpload ? apkUpload.id : null,
+          apkUpload ? apkUpload.name : null,
           req.user.id,
         ]
       );
@@ -284,7 +284,7 @@ router.delete('/releases/:id', requireAuth, requireAdmin, async (req, res) => {
   if (!release) return res.status(404).json({ error: 'Release not found' });
 
   // Best-effort Drive cleanup — a failed/missing file shouldn't block deleting the record.
-  const fileIds = [release.bin_file_id, release.zip_file_id, release.zip2_file_id, release.exe_file_id].filter(
+  const fileIds = [release.bin_file_id, release.zip_file_id, release.zip2_file_id, release.apk_file_id].filter(
     Boolean
   );
   await Promise.all(
@@ -312,11 +312,11 @@ router.delete('/releases/:id', requireAuth, requireAdmin, async (req, res) => {
   res.json({ success: true });
 });
 
-// Download the bin, zip, zip2 (Holtek), or exe file — only once the release is fully approved (or if admin)
+// Download the bin, zip, zip2 (Holtek), or apk file — only once the release is fully approved (or if admin)
 router.get('/releases/:id/download/:fileType', requireAuth, async (req, res) => {
   const { id, fileType } = req.params;
-  if (!['bin', 'zip', 'zip2', 'exe'].includes(fileType)) {
-    return res.status(400).json({ error: 'fileType must be bin, zip, zip2, or exe' });
+  if (!['bin', 'zip', 'zip2', 'apk'].includes(fileType)) {
+    return res.status(400).json({ error: 'fileType must be bin, zip, zip2, or apk' });
   }
 
   const { rows } = await pool.query('SELECT * FROM releases WHERE id = $1', [id]);
@@ -330,7 +330,7 @@ router.get('/releases/:id/download/:fileType', requireAuth, async (req, res) => 
     bin: release.bin_file_id,
     zip: release.zip_file_id,
     zip2: release.zip2_file_id,
-    exe: release.exe_file_id,
+    apk: release.apk_file_id,
   };
   const fileId = fileIdMap[fileType];
   if (!fileId) return res.status(404).json({ error: 'File not found' });

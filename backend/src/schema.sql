@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS projects (
 ALTER TABLE projects ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'firmware' CHECK (type IN ('firmware', 'app'));
 -- `type` determines which files a release under this project accepts:
 --   firmware : .bin (required), Firmware .zip (optional), Holtek .zip (optional)
---   app      : .zip (required), .exe (required)
+--   app      : .zip (required), .apk (required)
 CREATE TABLE IF NOT EXISTS releases (
   id              SERIAL PRIMARY KEY,
   project_id      INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -41,8 +41,8 @@ CREATE TABLE IF NOT EXISTS releases (
   zip_file_name   TEXT,
   zip2_file_id    TEXT,
   zip2_file_name  TEXT,
-  exe_file_id     TEXT,
-  exe_file_name   TEXT,
+  apk_file_id     TEXT,
+  apk_file_name   TEXT,
   overall_status  TEXT NOT NULL DEFAULT 'pending' CHECK (overall_status IN ('pending', 'approved', 'rejected')),
   created_by      INTEGER REFERENCES users(id),
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -51,8 +51,8 @@ CREATE TABLE IF NOT EXISTS releases (
 -- Safe to re-run: adds columns for databases created before these features existed.
 ALTER TABLE releases ADD COLUMN IF NOT EXISTS zip2_file_id TEXT;
 ALTER TABLE releases ADD COLUMN IF NOT EXISTS zip2_file_name TEXT;
-ALTER TABLE releases ADD COLUMN IF NOT EXISTS exe_file_id TEXT;
-ALTER TABLE releases ADD COLUMN IF NOT EXISTS exe_file_name TEXT;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS apk_file_id TEXT;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS apk_file_name TEXT;
 ALTER TABLE releases ALTER COLUMN zip_file_id DROP NOT NULL;
 ALTER TABLE releases ALTER COLUMN zip_file_name DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS release_stages (
