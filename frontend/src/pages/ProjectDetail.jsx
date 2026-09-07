@@ -24,9 +24,13 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
   async function onSubmit(e) {
     e.preventDefault();
     if (isApp) {
-      if (!zipFile || !exeFile) {
-        setError('Please attach both a .zip file and a .exe file.');
-        return;
+            if (exeFile) {
+        exeUpload = await drive.uploadFile(
+          exeFile.path,
+          `${versionTag}_${exeFile.originalname}`,
+          'application/octet-stream',   // ← consider 'application/vnd.android.package-archive'
+          folderId
+        );
       }
     } else if (!binFile) {
       setError('Please attach a .bin file.');
@@ -84,7 +88,7 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
               </div>
               <div className="field">
                 <label>.exe file</label>
-                <input type="file" accept=".exe" onChange={(e) => setExeFile(e.target.files[0])} required />
+                <input type="file" accept=".apk" onChange={(e) => setExeFile(e.target.files[0])} required />
               </div>
             </>
           ) : (

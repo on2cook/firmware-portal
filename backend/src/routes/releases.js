@@ -119,7 +119,7 @@ router.post(
     const binFile = req.files?.bin?.[0] || null;
     const zipFile = req.files?.zip?.[0] || null;
     const zip2File = req.files?.zip2?.[0] || null;
-    const exeFile = req.files?.exe?.[0] || null;
+    const exeFile = req.files?.apk?.[0] || null;
 
     const cleanup = () => {
       [binFile, zipFile, zip2File, exeFile].forEach((f) => {
