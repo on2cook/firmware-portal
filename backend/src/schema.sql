@@ -35,6 +35,12 @@ CREATE TABLE IF NOT EXISTS releases (
   project_id      INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   version         TEXT NOT NULL,
   note            TEXT,
+  -- The "Date of release" picked on the upload form. The API defaults it to
+  -- CURRENT_DATE when omitted, so the column itself is nullable.
+  release_date    DATE,
+  -- When the release became fully approved — set automatically by the stage
+  -- recomputation once all four stages have passed.
+  approved_at     TIMESTAMPTZ,
   bin_file_id     TEXT,
   bin_file_name   TEXT,
   zip_file_id     TEXT,
@@ -53,6 +59,12 @@ ALTER TABLE releases ADD COLUMN IF NOT EXISTS zip2_file_id TEXT;
 ALTER TABLE releases ADD COLUMN IF NOT EXISTS zip2_file_name TEXT;
 ALTER TABLE releases ADD COLUMN IF NOT EXISTS apk_file_id TEXT;
 ALTER TABLE releases ADD COLUMN IF NOT EXISTS apk_file_name TEXT;
+-- Safe to re-run: the upload route inserts releases.release_date and the stage
+-- recomputation updates releases.approved_at. Databases created before those
+-- features existed lack the columns, which made every new upload (and the final
+-- approval once all four stages pass) fail with a 500 - these ALTERs repair that.
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS release_date DATE;
+ALTER TABLE releases ADD COLUMN IF NOT EXISTS approved_at TIMESTAMPTZ;
 ALTER TABLE releases ALTER COLUMN zip_file_id DROP NOT NULL;
 ALTER TABLE releases ALTER COLUMN zip_file_name DROP NOT NULL;
 CREATE TABLE IF NOT EXISTS release_stages (
