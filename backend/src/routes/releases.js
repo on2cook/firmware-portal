@@ -15,6 +15,9 @@ const STAGE_NAMES = {
   4: 'Sandy Sir',
 };
 
+// Ensure the temp upload folder exists (it's gitignored except for .gitkeep,
+// so fresh deployments may not have it yet) — multer fails without it.
+fs.mkdirSync(path.join(__dirname, '..', '..', 'tmp_uploads'), { recursive: true });
 const upload = multer({ dest: path.join(__dirname, '..', '..', 'tmp_uploads') });
 
 function serializeRelease(release, stages, { canSeeFiles, user }) {
@@ -29,7 +32,9 @@ function serializeRelease(release, stages, { canSeeFiles, user }) {
     release_date: release.release_date,
     approved_at: release.approved_at,
     bin_file_name: canSeeFiles ? release.bin_file_name : null,
-    zip_file_name: canSeeFiles ? release.zip_file_name : null,
+    // Older releases may have stored the firmware .zip under either the zip or
+    // zip2 column — expose whichever one actually holds the file.
+    zip_file_name: canSeeFiles ? (release.zip_file_name || release.zip2_file_name) : null,
     zip2_file_name: canSeeFiles ? release.zip2_file_name : null,
     // Old releases uploaded before the .exe→.apk change kept their data in the
     // legacy exe_file_* columns — expose that so they still show a download.
@@ -241,7 +246,15 @@ router.post(
     } catch (err) {
       cleanup();
       console.error(err);
-      res.status(500).json({ error: 'Failed to create release. Check Google Drive configuration.' });
+      // Version is unique per project — give a clear message instead of a 500.
+      if (err.code === '23505') {
+        return res.status(409).json({ error: 'A release with this version already exists for this project' });
+      }
+      // Surface the real reason (missing Drive config, storage quota, etc.) so
+      // upload failures are easy to diagnose instead of a generic message.
+      res.status(500).json({
+        error: `Failed to create release: ${err.message || 'Check Google Drive configuration.'}`,
+      });
     }
   }
 );
@@ -332,7 +345,8 @@ router.get('/releases/:id/download/:fileType', requireAuth, async (req, res) => 
   // before the .exe → .apk change.
   const fileIdMap = {
     bin: release.bin_file_id,
-    zip: release.zip_file_id,
+    // Older releases may have the firmware zip stored under zip or zip2.
+    zip: release.zip_file_id || release.zip2_file_id,
     zip2: release.zip2_file_id,
     apk: release.apk_file_id || release.exe_file_id,
   };
@@ -344,7 +358,7 @@ router.get('/releases/:id/download/:fileType', requireAuth, async (req, res) => 
   // Google Drive or the original upload stored it with a different name.
   const fileConfig = {
     bin: { name: release.bin_file_name, ext: 'bin', mime: 'application/octet-stream' },
-    zip: { name: release.zip_file_name, ext: 'zip', mime: 'application/zip' },
+    zip: { name: release.zip_file_name || release.zip2_file_name, ext: 'zip', mime: 'application/zip' },
     zip2: { name: release.zip2_file_name, ext: 'zip', mime: 'application/zip' },
     apk: { name: release.apk_file_name || release.exe_file_name, ext: 'apk', mime: 'application/vnd.android.package-archive' },
   };
