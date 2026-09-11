@@ -198,7 +198,15 @@ function ReleaseDetail({ release, isAdmin, onUpdated, onDeleted }) {
   async function download(fileType) {
     setDownloading(fileType);
     try {
-      await api.downloadFile(release.id, fileType);
+      // Pass the stored file name so downloads keep the same name and the
+      // .apk extension (never a generic firmware.exe name).
+      const nameMap = {
+        bin: release.bin_file_name,
+        zip: release.zip_file_name,
+        zip2: release.zip2_file_name,
+        apk: release.apk_file_name,
+      };
+      await api.downloadFile(release.id, fileType, nameMap[fileType]);
     } catch (err) {
       alert(err.message);
     } finally {

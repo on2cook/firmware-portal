@@ -22,6 +22,9 @@ app.use(
       }
       return callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
+    // Expose the filename header so the browser can read it cross-origin and
+    // downloads keep the correct name/extension.
+    exposedHeaders: ['Content-Disposition'],
   })
 );
 app.use(express.json());

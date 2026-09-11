@@ -76,7 +76,7 @@ async function uploadFile(localPath, fileName, mimeType, parentFolderId) {
   return res.data;
 }
 /** Stream a Drive file's bytes directly into an Express response. */
-async function pipeFileToResponse(fileId, res) {
+async function pipeFileToResponse(fileId, res, options = {}) {
   const drive = getDrive();
   const meta = await drive.files.get({
     fileId,
@@ -87,8 +87,12 @@ async function pipeFileToResponse(fileId, res) {
     { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'stream' }
   );
-  res.setHeader('Content-Disposition', `attachment; filename="${meta.data.name}"`);
-  res.setHeader('Content-Type', meta.data.mimeType || 'application/octet-stream');
+  // The caller can force the download name + MIME type so files always keep
+  // their intended extension (e.g. .apk) regardless of what Drive stored.
+  const downloadName = options.downloadName || meta.data.name;
+  const contentType = options.contentType || meta.data.mimeType || 'application/octet-stream';
+  res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+  res.setHeader('Content-Type', contentType);
   stream.data.pipe(res);
 }
 /** Delete a file from Drive by its file ID. Safe to call even if already gone. */

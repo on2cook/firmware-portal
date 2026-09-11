@@ -31,7 +31,9 @@ function serializeRelease(release, stages, { canSeeFiles, user }) {
     bin_file_name: canSeeFiles ? release.bin_file_name : null,
     zip_file_name: canSeeFiles ? release.zip_file_name : null,
     zip2_file_name: canSeeFiles ? release.zip2_file_name : null,
-    apk_file_name: canSeeFiles ? release.apk_file_name : null,
+    // Old releases uploaded before the .exe→.apk change kept their data in the
+    // legacy exe_file_* columns — expose that so they still show a download.
+    apk_file_name: canSeeFiles ? (release.apk_file_name || release.exe_file_name) : null,
     files_available: canSeeFiles,
     stages: stages
       .sort((a, b) => a.stage_number - b.stage_number)
@@ -326,17 +328,35 @@ router.get('/releases/:id/download/:fileType', requireAuth, async (req, res) => 
   const canDownload = canSeeFilesFor(req.user, release);
   if (!canDownload) return res.status(403).json({ error: 'This release has not completed approval yet' });
 
+  // Fall back to the legacy exe_file_* columns for releases that were uploaded
+  // before the .exe → .apk change.
   const fileIdMap = {
     bin: release.bin_file_id,
     zip: release.zip_file_id,
     zip2: release.zip2_file_id,
-    apk: release.apk_file_id,
+    apk: release.apk_file_id || release.exe_file_id,
   };
   const fileId = fileIdMap[fileType];
   if (!fileId) return res.status(404).json({ error: 'File not found' });
 
+  // Force the correct filename extension + MIME type for every requested file
+  // type, so an app file ALWAYS downloads as .apk — never as .exe — even if
+  // Google Drive or the original upload stored it with a different name.
+  const fileConfig = {
+    bin: { name: release.bin_file_name, ext: 'bin', mime: 'application/octet-stream' },
+    zip: { name: release.zip_file_name, ext: 'zip', mime: 'application/zip' },
+    zip2: { name: release.zip2_file_name, ext: 'zip', mime: 'application/zip' },
+    apk: { name: release.apk_file_name || release.exe_file_name, ext: 'apk', mime: 'application/vnd.android.package-archive' },
+  };
+  const cfg = fileConfig[fileType];
+  const base = cfg.name ? cfg.name.replace(/\.[^.]*$/, '') : release.version;
+  const downloadName = base ? `${base}.${cfg.ext}` : `${release.version}.${cfg.ext}`;
+
   try {
-    await drive.pipeFileToResponse(fileId, res);
+    await drive.pipeFileToResponse(fileId, res, {
+      downloadName,
+      contentType: cfg.mime,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch file from Google Drive' });
