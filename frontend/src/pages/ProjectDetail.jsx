@@ -198,14 +198,7 @@ function ReleaseDetail({ release, isAdmin, onUpdated, onDeleted }) {
   async function download(fileType) {
     setDownloading(fileType);
     try {
-      // Pass the stored file name so the browser keeps the right name/extension.
-      const nameMap = {
-        bin: release.bin_file_name,
-        zip: release.zip_file_name,
-        zip2: release.zip2_file_name,
-        apk: release.apk_file_name,
-      };
-      await api.downloadFile(release.id, fileType, nameMap[fileType]);
+      await api.downloadFile(release.id, fileType);
     } catch (err) {
       alert(err.message);
     } finally {

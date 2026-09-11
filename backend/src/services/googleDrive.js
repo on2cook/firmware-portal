@@ -76,7 +76,7 @@ async function uploadFile(localPath, fileName, mimeType, parentFolderId) {
   return res.data;
 }
 /** Stream a Drive file's bytes directly into an Express response. */
-async function pipeFileToResponse(fileId, res, options = {}) {
+async function pipeFileToResponse(fileId, res) {
   const drive = getDrive();
   const meta = await drive.files.get({
     fileId,
@@ -87,11 +87,8 @@ async function pipeFileToResponse(fileId, res, options = {}) {
     { fileId, alt: 'media', supportsAllDrives: true },
     { responseType: 'stream' }
   );
-  // Overrides let the caller force the filename/MIME so a file always keeps the right extension.
-  const downloadName = options.downloadName || meta.data.name;
-  const contentType = options.contentType || meta.data.mimeType || 'application/octet-stream';
-  res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
-  res.setHeader('Content-Type', contentType);
+  res.setHeader('Content-Disposition', `attachment; filename="${meta.data.name}"`);
+  res.setHeader('Content-Type', meta.data.mimeType || 'application/octet-stream');
   stream.data.pipe(res);
 }
 /** Delete a file from Drive by its file ID. Safe to call even if already gone. */
