@@ -42,7 +42,7 @@ export const api = {
       body: { status, remarks, date },
     }),
   deleteRelease: (releaseId) => request(`/releases/${releaseId}`, { method: 'DELETE' }),
-  downloadFile: async (releaseId, fileType) => {
+  downloadFile: async (releaseId, fileType, suggestedName) => {
     const token = getToken();
     const res = await fetch(`${API_BASE}/releases/${releaseId}/download/${fileType}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -51,9 +51,17 @@ export const api = {
       const data = await res.json().catch(() => ({}));
       throw new Error(data.error || 'Download failed');
     }
+    // Prefer the caller-supplied name (from release data), then the server's
+    // Content-Disposition header, then a generic fallback.
     const disposition = res.headers.get('content-disposition') || '';
     const match = disposition.match(/filename="(.+?)"/);
-    const filename = match ? match[1] : `firmware.${fileType}`;
+    const headerName = match ? match[1] : '';
+    let filename = suggestedName || headerName || `firmware.${fileType}`;
+    // Guarantee the correct extension for the requested file type.
+    const ext = fileType === 'bin' ? 'bin' : fileType === 'apk' ? 'apk' : 'zip';
+    if (!filename.toLowerCase().endsWith(`.${ext}`)) {
+      filename = `${filename.replace(/\.[^.]*$/, '') || 'firmware'}.${ext}`;
+    }
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

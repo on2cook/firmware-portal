@@ -335,8 +335,25 @@ router.get('/releases/:id/download/:fileType', requireAuth, async (req, res) => 
   const fileId = fileIdMap[fileType];
   if (!fileId) return res.status(404).json({ error: 'File not found' });
 
+  // Map each file type to its DB name field, forced extension and MIME type so a
+  // file is always downloaded with the correct extension (a .apk can never be
+  // served as a .exe regardless of what Google Drive stored).
+  const fileTypeConfig = {
+    bin: { nameField: 'bin_file_name', ext: 'bin', contentType: 'application/octet-stream' },
+    zip: { nameField: 'zip_file_name', ext: 'zip', contentType: 'application/zip' },
+    zip2: { nameField: 'zip2_file_name', ext: 'zip', contentType: 'application/zip' },
+    apk: { nameField: 'apk_file_name', ext: 'apk', contentType: 'application/vnd.android.package-archive' },
+  };
+  const config = fileTypeConfig[fileType];
+  const storedName = release[config.nameField] || `${release.version}.${config.ext}`;
+  // Strip any existing extension, then force ours.
+  const downloadName = `${storedName.replace(/\.[^.]*$/, '') || release.version}.${config.ext}`;
+
   try {
-    await drive.pipeFileToResponse(fileId, res);
+    await drive.pipeFileToResponse(fileId, res, {
+      downloadName,
+      contentType: config.contentType,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to fetch file from Google Drive' });
