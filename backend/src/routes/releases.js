@@ -31,7 +31,7 @@ function serializeRelease(release, stages, { canSeeFiles, user }) {
     bin_file_name: canSeeFiles ? release.bin_file_name : null,
     zip_file_name: canSeeFiles ? release.zip_file_name : null,
     zip2_file_name: canSeeFiles ? release.zip2_file_name : null,
-    apk_file_name: canSeeFiles ? release.apk_file_name : null,
+    apk_file_name: canSeeFiles ? release.exe_file_name : null,
     files_available: canSeeFiles,
     stages: stages
       .sort((a, b) => a.stage_number - b.stage_number)
@@ -340,7 +340,7 @@ const fileNameMap = {
   bin: release.bin_file_name,
   zip: release.zip_file_name,
   zip2: release.zip2_file_name,
-  apk: release.apk_file_name,
+  apk: release.exe_file_name,
 };
 
 const fileName = fileNameMap[fileType] || `firmware.${fileType}`;

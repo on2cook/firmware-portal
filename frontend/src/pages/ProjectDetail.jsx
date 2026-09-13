@@ -261,9 +261,9 @@ function ReleaseDetail({ release, isAdmin, onUpdated, onDeleted }) {
               {downloading === 'zip2' ? 'Fetching…' : `Download ${release.zip2_file_name}`}
             </button>
           )}
-          {release.apk_file_name && (
+          {release.exe_file_name && (
             <button className="btn" disabled={downloading === 'apk'} onClick={() => download('apk')}>
-              {downloading === 'apk' ? 'Fetching…' : `Download ${release.apk_file_name}`}
+              {downloading === 'apk' ? 'Fetching…' : `Download ${release.exe_file_name}`}
             </button>
           )}
         </div>
