@@ -22,6 +22,7 @@ app.use(
       }
       return callback(new Error(`Origin ${origin} not allowed by CORS`));
     },
+    exposedHeaders: ['Content-Disposition'],
   })
 );
 app.use(express.json());

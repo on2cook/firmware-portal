@@ -15,7 +15,7 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
   const [binFile, setBinFile] = useState(null);
   const [zipFile, setZipFile] = useState(null);
   const [zip2File, setZip2File] = useState(null);
-  const [exeFile, setExeFile] = useState(null);
+  const [apkFile, setApkFile] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -24,8 +24,8 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
   async function onSubmit(e) {
     e.preventDefault();
     if (isApp) {
-      if (!zipFile || !exeFile) {
-        setError('Please attach both a .zip file and a .exe file.');
+      if (!zipFile || !apkFile) {
+        setError('Please attach both a .zip file and a .apk file.');
         return;
       }
     } else if (!binFile) {
@@ -42,7 +42,7 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
       if (binFile) fd.append('bin', binFile);
       if (zipFile) fd.append('zip', zipFile);
       if (zip2File) fd.append('zip2', zip2File);
-      if (exeFile) fd.append('exe', exeFile);
+      if (apkFile) fd.append('apk', apkFile);
       await api.createRelease(projectId, fd);
       setVersion('');
       setNote('');
@@ -50,7 +50,7 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
       setBinFile(null);
       setZipFile(null);
       setZip2File(null);
-      setExeFile(null);
+      setApkFile(null);
       e.target.reset();
       onCreated();
     } catch (err) {
@@ -83,8 +83,8 @@ function UploadForm({ projectId, projectType, onCreated, onCancel }) {
                 <input type="file" accept=".zip" onChange={(e) => setZipFile(e.target.files[0])} required />
               </div>
               <div className="field">
-                <label>.exe file</label>
-                <input type="file" accept=".exe" onChange={(e) => setExeFile(e.target.files[0])} required />
+                <label>.apk file</label>
+                <input type="file" accept=".apk" onChange={(e) => setApkFile(e.target.files[0])} required />
               </div>
             </>
           ) : (
@@ -261,9 +261,9 @@ function ReleaseDetail({ release, isAdmin, onUpdated, onDeleted }) {
               {downloading === 'zip2' ? 'Fetching…' : `Download ${release.zip2_file_name}`}
             </button>
           )}
-          {release.exe_file_name && (
-            <button className="btn" disabled={downloading === 'exe'} onClick={() => download('exe')}>
-              {downloading === 'exe' ? 'Fetching…' : `Download ${release.exe_file_name}`}
+          {release.apk_file_name && (
+            <button className="btn" disabled={downloading === 'apk'} onClick={() => download('apk')}>
+              {downloading === 'apk' ? 'Fetching…' : `Download ${release.apk_file_name}`}
             </button>
           )}
         </div>
